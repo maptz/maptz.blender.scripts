@@ -1,4 +1,5 @@
 {
+    "blender.addon.reloadOnSave": true,
     "python.linting.enabled": true,
     "python.autoComplete.extraPaths": [
         "X:/+++DEV/MaptzGitHub/blender/maptz.blender.scripts/resx/blender-autocomplete/2.90"

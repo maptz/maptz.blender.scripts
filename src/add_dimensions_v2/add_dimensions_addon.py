@@ -1,14 +1,13 @@
 """Allows you to add dimensions for selected vertices."""
-# context.area: VIEW_3D
 import mathutils
 import bpy
 import math
 import bmesh
 from math import radians
 from mathutils import Vector
-from myutils import print # pylint: disable=redefined-builtin
-from myutils import find_collection
-from myutils import make_collection
+from .myutils import print # pylint: disable=redefined-builtin
+from .myutils import find_collection
+from .myutils import make_collection
 
 def can_calc_bounds():
     """If bounds are calculated, returns True. Otherwise, False."""

@@ -6,18 +6,21 @@ import math
 import bmesh
 from math import radians
 from mathutils import Vector
-from myutils import print # pylint: disable=redefined-builtin
-from myutils import find_collection
-from myutils import make_collection
+from .myutils import console_write  # pylint: disable=redefined-builtin
+from .myutils import find_collection
+from .myutils import make_collection
+from .myutils import make_new_collection
+
 
 def can_calc_bounds():
     """If bounds are calculated, returns True. Otherwise, False."""
-    if (bpy.context.object is None): 
+    if (bpy.context.object is None):
         return False
     bpy.ops.object.mode_set(mode='OBJECT')
     mesh = bpy.context.object.data
     verts = [v for v in mesh.vertices if v.select]
     return len(verts) > 1
+
 
 def calc_bounds():
     """Calculates the bounding box for selected vertices.
@@ -25,24 +28,24 @@ def calc_bounds():
     # for some reason we must change into object mode for the calculations
     mode = bpy.context.object.mode
     bpy.ops.object.mode_set(mode='OBJECT')
-    
+
     loc = bpy.context.object.location
-    print("Getting verts of boject " + str(loc))
+    #print("Getting verts of boject " + str(loc))
 
     mesh = bpy.context.object.data
     verts = [v for v in mesh.vertices if v.select]
-    if len(verts) <=1:
+    if len(verts) <= 1:
         raise Exception("Not enough vertices")
 #    elif len(verts) == 2:
 #        bounds = [0,0,0,0,0,0]
 #        bounds[0] = verts[0].co.x
 #        bounds[1] = verts[1].co.x
-#        bounds[2] = verts[0].co.y        
+#        bounds[2] = verts[0].co.y
 #        bounds[3] = verts[1].co.y
 #        bounds[4] = verts[0].co.z
 #        bounds[5] = verts[1].co.z
 #        bpy.ops.object.mode_set(mode=mode)
-#        return bounds        
+#        return bounds
 
     # [+x, -x, +y, -y, +z, -z]
     v = verts[0].co
@@ -62,19 +65,20 @@ def calc_bounds():
         if bounds[5] > v.co.z:
             bounds[5] = v.co.z
 
-    print("Before" + str(bounds))
+    #print("Before" + str(bounds))
 
     bounds[0] = bounds[0] + loc[0]
     bounds[1] = bounds[1] + loc[0]
     bounds[2] = bounds[2] + loc[1]
     bounds[3] = bounds[3] + loc[1]
     bounds[4] = bounds[4] + loc[2]
-    bounds[5] = bounds[5] + loc[2]    
-    
-    print("After" + str(bounds))
+    bounds[5] = bounds[5] + loc[2]
+
+    #print("After" + str(bounds))
 
     bpy.ops.object.mode_set(mode=mode)
     return bounds
+
 
 def saveVertexBounds():
     bounds = calc_bounds()
@@ -85,15 +89,24 @@ def saveVertexBounds():
     # print(strs)
     # bpy.context.window_manager.clipboard = strs
 
-def addLine(fromVertex, toVertex, collection=bpy.context.scene.collection):    
+
+def addLine(fromVertex, toVertex, collection):
+    if collection is None:
+        collection = bpy.context.scene.collection
+
     verts = [fromVertex, toVertex]  # 2 verts made with XYZ coords
     mesh = bpy.data.meshes.new("mesh")  # add a new mesh
-    obj = bpy.data.objects.new("Measurement - Line", mesh)  # add a new object using the mesh
+    # add a new object using the mesh
+    obj = bpy.data.objects.new("Measurement - Line", mesh)
 
     #    bpy.context.collection.objects.link(obj)  # put the object into the scene (link)
     collection.objects.link(obj)
-    bpy.context.view_layer.objects.active = obj  # set as the active object in the scene
-    obj.select_set(True) #Select the object
+    if bpy.context.view_layer is None:
+        return None
+
+    # set as the active object in the scene
+    bpy.context.view_layer.objects.active = obj
+    obj.select_set(True)  # Select the object
 
     mesh = bpy.context.object.data
     bm = bmesh.new()
@@ -105,14 +118,17 @@ def addLine(fromVertex, toVertex, collection=bpy.context.scene.collection):
     bm.edges.new((bm.verts[0], bm.verts[1]))
 
     # make the bmesh the object's mesh
-    bm.to_mesh(mesh)  
+    bm.to_mesh(mesh)
     bm.free()  # always do this when finishedd
     return obj
 
-def addText(location, str, collection=bpy.context.scene.collection):
-    font_curve = bpy.data.curves.new(type="FONT",name="Font Curve")
+
+def addText(location, str, collection, font_size):
+    if collection is None:
+        collection = bpy.context.scene.collection
+    font_curve = bpy.data.curves.new(type="FONT", name="Font Curve")
     font_curve.body = str
-    font_curve.size = 0.2
+    font_curve.size = font_size
     font_curve.align_x = 'CENTER'
     font_obj = bpy.data.objects.new("Measurement - Font", font_curve)
     font_obj.location = location
@@ -121,109 +137,125 @@ def addText(location, str, collection=bpy.context.scene.collection):
     #font_obj.rotation_euler.rotate_axis('X', math.radians(90))
     return font_obj
 
-def addDimensions(plane="xz", offset=1.0, onAxis=True):
+
+def addDimensions(plane="xz", offset=1.0, onAxis=True, fontSize=0.2):
+
+    console_write("addDimensions called: '" +
+                  plane + "' offset: " + str(offset))
+
     canDo = can_calc_bounds()
     if (canDo is False):
         return False
-    fontSize = 0.2
     measure_collection = make_collection("00 - Measurements", bpy.context.scene.collection)
-    obj =  bpy.context.object
-    bounds = calc_bounds() # TODO With two points, don't calculate bounds.!!
-    boundsA = (bounds[0],bounds[2],bounds[4])
-    boundsB = (bounds[1],bounds[3],bounds[5])
-    bounds1 = mathutils.Vector(boundsA) # nb bounds1[:] turns this into a tuple
+    measure_collection = make_new_collection("Measurement", measure_collection)
+    obj = bpy.context.object
+    bounds = calc_bounds()  # TODO With two points, don't calculate bounds.!!
+    boundsA = (bounds[0], bounds[2], bounds[4])
+    boundsB = (bounds[1], bounds[3], bounds[5])
+    # nb bounds1[:] turns this into a tuple
+    bounds1 = mathutils.Vector(boundsA)
     bounds2 = mathutils.Vector(boundsB)
     direction = (bounds2 - bounds1)
     direction.normalize()
     #topT.rotation_euler = (radians(0),0,0)
-    rotation = (0,0,0)
-    
-    yvec = mathutils.Vector((0,1,0))
-    if (plane is "xz"):
-        rotation = (radians(90),0,0)
-        yvec = mathutils.Vector((0,-1,0))
-    if (plane is "xy"):
-        rotation = (radians(0),0,radians(0))
-        yvec = mathutils.Vector((0,0,1))
-    if (plane is "yz"):
-        rotation = (radians(90),0,radians(90))
-        yvec = mathutils.Vector((1,0,0))
-    
-    #crosso sis the cross product with the yvec. 
+    rotation = (0, 0, 0)
+
+    yvec = mathutils.Vector((0, 1, 0))
+    if (plane == "xz"):
+        rotation = (radians(90), 0, 0)
+        yvec = mathutils.Vector((0, -1, 0))
+    if (plane == "xy"):
+        rotation = (radians(0), 0, radians(0))
+        yvec = mathutils.Vector((0, 0, 1))
+    if (plane == "yz"):
+        rotation = (radians(90), 0, radians(90))
+        yvec = mathutils.Vector((1, 0, 0))
+
+    # crosso sis the cross product with the yvec.
     crosso = direction.copy()
     crosso = crosso.cross(yvec)
     crosso = crosso * offset
     perp = direction.copy()
     perp = perp.cross(yvec)
-    
+
     dist = (bounds2 - bounds1).length
     textPos = bounds1 + direction * (dist / 2)
     if (onAxis is True):
-        if (plane is "xz"):
+        if (plane == "xz"):
             textPos[1] = 0
-        if (plane is "xy"):
+        if (plane == "xy"):
             textPos[2] = 0
-        if (plane is "yz"):
+        if (plane == "yz"):
             textPos[0] = 0
-            
+
     #mat_rot = mathutils.Matrix.Rotation(radians(90.0), 4, 'X')
     #textPos = mat_trans * textPos
-    textPos = textPos + crosso 
+    textPos = textPos + crosso
     #+ crosso * fontSize
 
-    #NB Update viewport to get text height bpy.context.view_layer.update()  https://blender.stackexchange.com/questions/8606/how-do-i-use-python-to-get-the-dimensions-of-a-text-object-immediately-after-it
+    # NB Update viewport to get text height bpy.context.view_layer.update()  https://blender.stackexchange.com/questions/8606/how-do-i-use-python-to-get-the-dimensions-of-a-text-object-immediately-after-it
     dist = round(dist * 1000)
     #addText((0,0,1), str(dist) + "mm")
-    new_text = addText(textPos, str(dist), measure_collection)
+    new_text = addText(textPos, str(dist), measure_collection, fontSize)
     new_text.rotation_euler = rotation
-        
+
     lineStart = (bounds1 + crosso)
     lineEnd = (bounds2 + crosso)
-    
+
     if (onAxis is True):
-        if (plane is "xz"):
+        if (plane == "xz"):
             lineStart[1] = 0
             lineEnd[1] = 0
-        if (plane is "xy"):
+        if (plane == "xy"):
             lineStart[2] = 0
             lineEnd[2] = 0
-        if (plane is "yz"):
+        if (plane == "yz"):
             lineStart[0] = 0
             lineEnd[0] = 0
-    
+
     new_line = addLine(lineStart[:], lineEnd[:], measure_collection)
-    
+
     startTagStart = lineStart
     startTagEnd = lineStart
-    tagLen =0- offset
-    if (plane is "xz"):
+    tagLen = 0 - offset
+    if (plane == "xz"):
         startTagEnd = startTagEnd + perp*tagLen
-    if (plane is "xy"):
-        startTagEnd = startTagEnd  + perp*tagLen
-    if (plane is "yz"):
+    if (plane == "xy"):
         startTagEnd = startTagEnd + perp*tagLen
-        
+    if (plane == "yz"):
+        startTagEnd = startTagEnd + perp*tagLen
+
     start_tag = addLine(startTagStart[:], startTagEnd[:], measure_collection)
-        
+
     endTagStart = lineEnd
     endTagEnd = lineEnd
-    if (plane is "xz"):
+    if (plane == "xz"):
         endTagEnd = endTagEnd + perp*tagLen
-    if (plane is "xy"):
-        endTagEnd = endTagEnd  + perp*tagLen
-    if (plane is "yz"):
+    if (plane == "xy"):
         endTagEnd = endTagEnd + perp*tagLen
-    
-    end_tag = addLine(endTagStart[:], endTagEnd[:], measure_collection)
-    
-    join([new_line, start_tag, end_tag])
-    
-    obj.select_set(False) #Select the object
-    new_line.select_set(True) #Select the object
-    new_text.select_set(True) #Select the object
+    if (plane == "yz"):
+        endTagEnd = endTagEnd + perp*tagLen
 
-    
+    end_tag = addLine(endTagStart[:], endTagEnd[:], measure_collection)
+
+    join([new_line, start_tag, end_tag])
+
+    new_line.color = (0.0112559, 1, 0.00616773, 1)
+    new_text.color = (0.0112559, 1, 0.00616773, 1)
+
+    change_selection = False
+    if change_selection:
+        obj.select_set(False)  # Select the object
+        new_line.select_set(True)  # Select the object
+        new_text.select_set(True)  # Select the object
+    else:
+        bpy.context.view_layer.objects.active = obj
+        obj.select_set(True)  # Select the object
+        new_line.select_set(False)  # Select the object
+        new_text.select_set(False)  # Select the object
+
     return True
+
 
 def join(obs):
     ctx = bpy.context.copy()
@@ -244,83 +276,9 @@ def join(obs):
 # ------------------------------------------------------------------
 # ----ADD ON
 
-class AddDimensionsXYButton(bpy.types.Operator):
-    """Defines a button"""
-    bl_idname = "add.dimensionsxy"
-    bl_label = "Add dimensions XY"
-    bl_options = {'REGISTER', 'UNDO'}
 
-    planes = [('XY', "XY", "XY"),
-             ('XZ', "XZ", "XZ"),
-             ('YZ', "YZ", "YZ")]
-    
-    offset: bpy.props.FloatProperty(name="Offset", default=1.0, min=-100.0, max=100.0)
-    font_size: bpy.props.FloatProperty(name="Font Size", default=0.2, min=0.01, max=1.0)
-    plane: bpy.props.EnumProperty(name="Plane",items=planes)
- 
-    def execute(self, context):
-        success = addDimensions("xy", self.offset)
-        if (success is False):
-            self.report({"WARNING"}, "Something isn't right")
-            return{'CANCELLED'}
-        return{'FINISHED'}  
-    
-class AddDimensionsXZButton(bpy.types.Operator):
-    """Defines a button"""
-    bl_idname = "add.dimensionsxz"
-    bl_label = "Add dimensions XZ"
-    bl_options = {'REGISTER', 'UNDO'}    
-    
-    offset: bpy.props.FloatProperty(name="Offset", default=1.0, min=-100.0, max=100.0)
- 
-    def execute(self, context):
-        success = addDimensions("xz", self.offset)
-        if (success is False):
-            self.report({"WARNING"}, "Something isn't right")
-            return{'CANCELLED'}
-        return{'FINISHED'}  
-        
-class AddDimensionsYZButton(bpy.types.Operator):
-    """Defines a button"""
-    bl_idname = "add.dimensionsyz"
-    bl_label = "Add dimensions YZ"
-    bl_options = {'REGISTER', 'UNDO'}    
-    
-    offset: bpy.props.FloatProperty(name="Offset", default=1.0, min=-100.0, max=100.0)
- 
-    def execute(self, context):
-        success = addDimensions("yz", self.offset)
-        if success is False:
-            self.report({"WARNING"}, "Something isn't right")
-            return{'CANCELLED'}
-        return{'FINISHED'}  
+if __name__ == "__main__":
+    register()
 
-classes = [AddDimensionsXYButton, AddDimensionsXZButton, AddDimensionsYZButton]
-addon_keymaps = []
-
-def register():
-    # Register the plugin
-    wm = bpy.context.window_manager
-    km = wm.keyconfigs.addon.keymaps.new(name='Object Mode', space_type='EMPTY')
-    kmi = km.keymap_items.new(AddDimensionsXZButton.bl_idname, 'T', 'PRESS', ctrl=True, shift=True)
-    addon_keymaps.append((km, kmi))
-    
-    for i in classes:
-        bpy.utils.register_class(i)
-
-
-def unregister():
-    for i in classes:
-        bpy.utils.unregister_class(i)
-
-    # handle the keymap
-    for km, kmi in addon_keymaps:
-        km.keymap_items.remove(kmi)
-    addon_keymaps.clear()
-
-
-# if __name__ == "__main__":
-#     register()
-
-print("Registered add_dimensions_addon.py")
-addDimensions("xy", -0.3, False)
+# print("Registered add_dimensions_addon.py")
+# addDimensions("xy", -0.3, False)
