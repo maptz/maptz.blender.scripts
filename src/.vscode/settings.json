@@ -1,0 +1,10 @@
+{
+    "python.linting.enabled": true,
+    "python.autoComplete.extraPaths": [
+        "X:/+++DEV/MaptzGitHub/blender/maptz.blender.scripts/resx/blender-autocomplete/2.90"
+    ],
+    "python.linting.pylintArgs": [
+        "--init-hook",
+        "import sys; sys.path.append('X:/+++DEV/MaptzGitHub/blender/maptz.blender.scripts/resx/blender-autocomplete/2.90')"
+    ],
+}
