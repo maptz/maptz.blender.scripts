@@ -56,7 +56,7 @@ def saveCameraFrames():
         bpy.context.scene.frame_set(i)
         scene = bpy.data.scenes['Scene']
         camName = cam.name
-        filePath = "X:\\Dropbox\\DOCUMENTS\\PROPERTY\\LIVED IN\\5 GOWAR AVENUE\\BUILDING DRAWINGS - PREP\\Document Prep\\Images\\Wires\\Wires-by-room\\" + camName + ".png"
+        filePath = "X:\\" + camName + ".png"
         bpy.context.scene.render.filepath = filePath
         bpy.ops.render.opengl(animation=False,write_still=True)
         #bpy.ops.image.save_as(save_as_render=True, copy=True, filepath=filePath, show_multiview=False, use_multiview=False)
