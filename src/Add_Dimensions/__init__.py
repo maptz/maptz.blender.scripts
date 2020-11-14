@@ -25,7 +25,7 @@ class AddDimensionsButton(bpy.types.Operator):
 
     
     offset: bpy.props.FloatProperty(name="Offset", default=1.0, min=-100.0, max=100.0)
-    font_size: bpy.props.FloatProperty(name="Font Size", default=0.2, min=0.01, max=1.0)
+    font_size: bpy.props.FloatProperty(name="Font Size", default=0.1, min=0.01, max=1.0)
     plane: bpy.props.EnumProperty(name="Plane", items=planes, default= "xy")
     on_axis: bpy.props.BoolProperty(name="On Axis", description="On axis", default=True)
  
@@ -52,6 +52,10 @@ def register():
     km = wm.keyconfigs.addon.keymaps.new(name='Object Mode', space_type='EMPTY')
     kmi = km.keymap_items.new(AddDimensionsButton.bl_idname, 'T', 'PRESS', ctrl=True, shift=True)
     addon_keymaps.append((km, kmi))
+
+    km = wm.keyconfigs.addon.keymaps.new(name='Mesh', space_type='EMPTY')
+    kmi = km.keymap_items.new(AddDimensionsButton.bl_idname, 'T', 'PRESS', ctrl=True, shift=True)
+    addon_keymaps.append((km, kmi)) 
 
     bpy.types.VIEW3D_MT_object.append(menu_func)
     
