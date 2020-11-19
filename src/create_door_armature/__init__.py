@@ -67,10 +67,12 @@ class AddDrawerArmature(bpy.types.Operator):
         name="Open distance", default=1.0, min=-100.0, max=100.0)
     axis: bpy.props.EnumProperty(name="Axus", items=enums, default="X")
     flip: bpy.props.BoolProperty(name="Flip", description="Flip", default=True)
+    scale: bpy.props.FloatProperty(
+        name="scale", default=1.0, min=0, max=360.0)
 
     def execute(self, context):
         console_write("Add drawer armature")
-        add_drawer_bone(self.axis, self.flip, self.length)
+        add_drawer_bone(self.axis, self.flip, self.length, self.scale)
         success = True
         if (success is False):
             self.report({"WARNING"}, "Something isn't right")
@@ -111,7 +113,7 @@ def unregister():
 # endregion
 
 
-def add_drawer_bone(axis="X", flip=True, length=0.5):
+def add_drawer_bone(axis="X", flip=True, length=0.5, scale = 1.0):
     add_poselib = False
     cursor_location = bpy.context.scene.cursor.location
     bpy.ops.object.armature_add(
@@ -131,6 +133,7 @@ def add_drawer_bone(axis="X", flip=True, length=0.5):
 
     armature["open"] = 0.0
     
+    armature.scale =  (scale, scale, scale)
     angle = -90
     euler_axis = "X"
     if (axis == "Y"):
@@ -143,7 +146,7 @@ def add_drawer_bone(axis="X", flip=True, length=0.5):
         euler_axis = "X"
         angle = 180 if flip else 0
     armature.rotation_euler.rotate_axis(euler_axis, math.radians(angle))
-    bpy.ops.object.transform_apply(rotation=True)
+    bpy.ops.object.transform_apply(rotation=True, location=False)
 
     drawer_open_distance = length
 
