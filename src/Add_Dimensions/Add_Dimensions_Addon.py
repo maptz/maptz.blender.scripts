@@ -16,21 +16,10 @@ def can_calc_bounds():
     """If bounds are calculated, returns True. Otherwise, False."""
     if (bpy.context.object is None):
         return False
-
     bpy.ops.object.mode_set(mode='OBJECT')
-    all_vertices = list(range(0))
-    for nr, obj in enumerate(bpy.context.selected_objects):
-        if obj.type == 'MESH':
-            verts = [v for v in obj.data.vertices if v.select]
-            for v in obj.data.vertices:
-                if v.select:
-                    all_vertices.append(v)
-    return len(all_vertices) > 1
-    
-    # bpy.ops.object.mode_set(mode='OBJECT')
-    # mesh = bpy.context.object.data
-    # verts = [v for v in mesh.vertices if v.select]
-    # return len(verts) > 1
+    mesh = bpy.context.object.data
+    verts = [v for v in mesh.vertices if v.select]
+    return len(verts) > 1
 
 
 def calc_bounds():
@@ -40,32 +29,23 @@ def calc_bounds():
     mode = bpy.context.object.mode
     bpy.ops.object.mode_set(mode='OBJECT')
 
-    all_vertices = list(range(0))
-    for nr, obj in enumerate(bpy.context.selected_objects):
-        if obj.type == 'MESH':
-            for v in obj.data.vertices:
-                if v.select:
-                    all_vertices.append(v)
-
     loc = bpy.context.object.location
-    # print("Getting verts of boject " + str(loc))
+    #print("Getting verts of boject " + str(loc))
 
-    # mesh = bpy.context.object.data
-    # verts = [v for v in mesh.vertices if v.select]
-    verts = all_vertices
-
+    mesh = bpy.context.object.data
+    verts = [v for v in mesh.vertices if v.select]
     if len(verts) <= 1:
         raise Exception("Not enough vertices")
-    elif len(verts) == 2:
-        bounds = [0, 0, 0, 0, 0, 0]
-        bounds[0] = verts[0].co.x
-        bounds[1] = verts[1].co.x
-        bounds[2] = verts[0].co.y
-        bounds[3] = verts[1].co.y
-        bounds[4] = verts[0].co.z
-        bounds[5] = verts[1].co.z
-        bpy.ops.object.mode_set(mode=mode)
-        return bounds
+#    elif len(verts) == 2:
+#        bounds = [0,0,0,0,0,0]
+#        bounds[0] = verts[0].co.x
+#        bounds[1] = verts[1].co.x
+#        bounds[2] = verts[0].co.y
+#        bounds[3] = verts[1].co.y
+#        bounds[4] = verts[0].co.z
+#        bounds[5] = verts[1].co.z
+#        bpy.ops.object.mode_set(mode=mode)
+#        return bounds
 
     # [+x, -x, +y, -y, +z, -z]
     v = verts[0].co
@@ -85,7 +65,7 @@ def calc_bounds():
         if bounds[5] > v.co.z:
             bounds[5] = v.co.z
 
-    # print("Before" + str(bounds))
+    #print("Before" + str(bounds))
 
     bounds[0] = bounds[0] + loc[0]
     bounds[1] = bounds[1] + loc[0]
@@ -94,7 +74,7 @@ def calc_bounds():
     bounds[4] = bounds[4] + loc[2]
     bounds[5] = bounds[5] + loc[2]
 
-    # print("After" + str(bounds))
+    #print("After" + str(bounds))
 
     bpy.ops.object.mode_set(mode=mode)
     return bounds
@@ -143,19 +123,18 @@ def addLine(fromVertex, toVertex, collection):
     return obj
 
 
-def addText(location, name, content, collection, font_size):
+def addText(location, str, collection, font_size):
     if collection is None:
         collection = bpy.context.scene.collection
     font_curve = bpy.data.curves.new(type="FONT", name="Font Curve")
-    font_curve.body = content
-    
+    font_curve.body = str
     font_curve.size = font_size
     font_curve.align_x = 'CENTER'
-    font_obj = bpy.data.objects.new(name, font_curve)
+    font_obj = bpy.data.objects.new("Measurement - Font", font_curve)
     font_obj.location = location
     collection.objects.link(font_obj)
     bpy.context.view_layer.objects.active = font_obj
-    # font_obj.rotation_euler.rotate_axis('X', math.radians(90))
+    #font_obj.rotation_euler.rotate_axis('X', math.radians(90))
     return font_obj
 
 
@@ -167,16 +146,10 @@ def addDimensions(plane="xz", offset=1.0, onAxis=True, fontSize=0.2):
     canDo = can_calc_bounds()
     if (canDo is False):
         return False
-
-    
-    # parent_measure_collection = make_collection(
-    #     "00 - Measurements", bpy.context.scene.collection)
     measure_collection = make_collection("00 - Measurements", bpy.context.scene.collection)
-    # measure_collection = make_collection(
-    #     "01 - Measurements - " + plane, parent_measure_collection)
-    # measure_collection = make_new_collection("Measurement", measure_collection)
+    measure_collection = make_new_collection("Measurement", measure_collection)
     obj = bpy.context.object
-    bounds = calc_bounds()  # TODO With two points, don't calcul    ate bounds.!!
+    bounds = calc_bounds()  # TODO With two points, don't calculate bounds.!!
     boundsA = (bounds[0], bounds[2], bounds[4])
     boundsB = (bounds[1], bounds[3], bounds[5])
     # nb bounds1[:] turns this into a tuple
@@ -184,7 +157,7 @@ def addDimensions(plane="xz", offset=1.0, onAxis=True, fontSize=0.2):
     bounds2 = mathutils.Vector(boundsB)
     direction = (bounds2 - bounds1)
     direction.normalize()
-    # topT.rotation_euler = (radians(0),0,0)
+    #topT.rotation_euler = (radians(0),0,0)
     rotation = (0, 0, 0)
 
     yvec = mathutils.Vector((0, 1, 0))
@@ -215,16 +188,15 @@ def addDimensions(plane="xz", offset=1.0, onAxis=True, fontSize=0.2):
         if (plane == "yz"):
             textPos[0] = 0
 
-    # mat_rot = mathutils.Matrix.Rotation(radians(90.0), 4, 'X')
-    # textPos = mat_trans * textPos
+    #mat_rot = mathutils.Matrix.Rotation(radians(90.0), 4, 'X')
+    #textPos = mat_trans * textPos
     textPos = textPos + crosso
-    # + crosso * fontSize
+    #+ crosso * fontSize
 
     # NB Update viewport to get text height bpy.context.view_layer.update()  https://blender.stackexchange.com/questions/8606/how-do-i-use-python-to-get-the-dimensions-of-a-text-object-immediately-after-it
     dist = round(dist * 1000)
-    # addText((0,0,1), str(dist) + "mm")
-    text_name = "Measure - Text - " + str(int(round(dist)))
-    new_text = addText(textPos, text_name, str(dist), measure_collection, fontSize)
+    #addText((0,0,1), str(dist) + "mm")
+    new_text = addText(textPos, str(dist), measure_collection, fontSize)
     new_text.rotation_euler = rotation
 
     lineStart = (bounds1 + crosso)
@@ -242,7 +214,6 @@ def addDimensions(plane="xz", offset=1.0, onAxis=True, fontSize=0.2):
             lineEnd[0] = 0
 
     new_line = addLine(lineStart[:], lineEnd[:], measure_collection)
-    new_line.name = "Measure - Line - " + str(int(round(dist)))
 
     startTagStart = lineStart
     startTagEnd = lineStart
@@ -292,13 +263,13 @@ def join(obs):
     # one of the objects to join
     ctx['active_object'] = obs[0]
 
-    # ctx['selected_objects'] = obs
+    #ctx['selected_objects'] = obs
     # In Blender 2.8x this needs to be the following instead:
     ctx['selected_editable_objects'] = obs
 
     # We need the scene bases as well for joining.
     # Remove this line in Blender >= 2.80!
-    # ctx['selected_editable_bases'] = [scene.object_bases[ob.name] for ob in obs]
+    #ctx['selected_editable_bases'] = [scene.object_bases[ob.name] for ob in obs]
 
     bpy.ops.object.join(ctx)
 
