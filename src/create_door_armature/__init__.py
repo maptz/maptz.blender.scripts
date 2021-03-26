@@ -2,7 +2,6 @@
 import bpy
 import math
 import mathutils
-from .myutils import console_write
 # endregion
 
 # region Info
@@ -19,7 +18,26 @@ bl_info = {
 # endregion
 
 # region Classes
+def console_get():
+    for area in bpy.context.screen.areas:
+        if area.type == 'CONSOLE':
+            for space in area.spaces:
+                if space.type == 'CONSOLE':
+                    return area, space
+    return None, None
 
+def console_write(text):
+    area, space = console_get()
+    if space is None:
+        return
+
+    context = bpy.context.copy()
+    context.update(dict(
+        space=space,
+        area=area,
+    ))
+    for line in text.split("\n"):
+        bpy.ops.console.scrollback_append(context, text=line, type='OUTPUT')
 
 class AddDoorArmature(bpy.types.Operator):
     """Adds a door armature"""
@@ -268,3 +286,8 @@ def add_door_bone(orientation, flip, angle, scale):
 
 # To apply the pose.
     #bpy.ops.poselib.apply_pose(pose_index=- 1)
+
+# This allows you to run the script directly from Blender's Text editor
+# to test the add-on without having to install it.
+if __name__ == "__main__":
+    register()
